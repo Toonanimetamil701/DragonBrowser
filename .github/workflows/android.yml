@@ -1,4 +1,4 @@
-Name: Build DragonBrowser APK
+name: Build DragonBrowser APK
 on: [push, workflow_dispatch]
 
 jobs:
@@ -12,8 +12,10 @@ jobs:
       - name: Unzip Source Code
         run: |
           unzip "dragon-browser-plus Final.zip"
+          # Moves files if they are in a subfolder
           if [ -d "DragonPro" ]; then mv DragonPro/* .; fi
           if [ -d "DragonBrowser" ]; then mv DragonBrowser/* .; fi
+          if [ -d "dragon-browser-plus Final" ]; then mv "dragon-browser-plus Final"/* .; fi
 
       - name: Setup Node.js (v18)
         uses: actions/setup-node@v3
