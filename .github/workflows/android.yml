@@ -1,4 +1,4 @@
-name: Build DragonBrowser APK
+name: Build DragonBrowser (Debug with Permissions)
 on: [push, workflow_dispatch]
 
 jobs:
@@ -11,7 +11,6 @@ jobs:
       - name: Unzip Source Code
         run: |
           unzip "dragon-browser-plus Final.zip"
-          # Moves files if they are in a subfolder
           if [ -d "DragonPro" ]; then mv DragonPro/* .; fi
           if [ -d "DragonBrowser" ]; then mv DragonBrowser/* .; fi
           if [ -d "dragon-browser-plus Final" ]; then mv "dragon-browser-plus Final"/* .; fi
@@ -23,10 +22,9 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          # FIX: Force install the latest version of the broken package first
+          # 1. Fix the dependency error
           npm install @google/genai@latest
-          
-          # Now install the rest of the dependencies
+          # 2. Install everything else
           npm install
           npm install @capacitor/android
 
@@ -47,7 +45,61 @@ jobs:
           npx cap add android
           npx cap sync
 
-      - name: Build APK
+      # ========================================================
+      # INJECT YOUR CUSTOM PERMISSIONS MANIFEST
+      # ========================================================
+      - name: Inject Custom AndroidManifest
+        run: |
+          cat <<EOF > android/app/src/main/AndroidManifest.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+              package="com.dragongo.browser">
+
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+              <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+              <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+              <uses-permission android:name="android.permission.CAMERA" />
+
+              <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+              <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+              <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+              <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+
+              <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+              <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
+
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+              <application
+                  android:allowBackup="true"
+                  android:usesCleartextTraffic="true"
+                  android:icon="@mipmap/ic_launcher"
+                  android:label="@string/app_name"
+                  android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:configChanges="orientation|screenSize|keyboardHidden"
+                      android:hardwareAccelerated="true">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+
+              </application>
+          </manifest>
+          EOF
+
+      # ========================================================
+      # BUILD DEBUG APK (No Keys Required)
+      # ========================================================
+      - name: Build Debug APK
         run: |
           cd android
           chmod +x gradlew
@@ -56,5 +108,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: DragonBrowser-Final
+          name: DragonBrowser-Debug-With-Permissions
           path: android/app/build/outputs/apk/debug/app-debug.apk
