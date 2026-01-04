@@ -1,4 +1,4 @@
-name: Build DragonBrowser (YouTube Fix)
+name: Build DragonBrowser (Ultimate Web Fix)
 on: [push, workflow_dispatch]
 
 jobs:
@@ -39,8 +39,7 @@ jobs:
         uses: android-actions/setup-android@v3
 
       # ========================================================
-      # STEP 1: CONFIG FIX (USER AGENT SPOOFING)
-      # This tricks YouTube into thinking we are Chrome
+      # STEP 1: CONFIG FIX (SAFE USER AGENT & HTTP SCHEME)
       # ========================================================
       - name: Fix Capacitor Config
         run: |
@@ -51,12 +50,13 @@ jobs:
             "webDir": "dist",
             "bundledWebRuntime": false,
             "server": {
-              "androidScheme": "https",
-              "allowNavigation": ["*"]
+              "androidScheme": "http",
+              "allowNavigation": ["*"],
+              "cleartext": true
             },
             "android": {
               "allowMixedContent": true,
-              "overrideUserAgent": "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.6367.113 Mobile Safari/537.36"
+              "overrideUserAgent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36"
             }
           }
           EOF
@@ -71,7 +71,25 @@ jobs:
           npx cap sync
 
       # ========================================================
-      # STEP 3: INJECT MANIFEST
+      # STEP 3: CREATE NETWORK SECURITY CONFIG (ALLOW ALL)
+      # ========================================================
+      - name: Create Network Security Config
+        run: |
+          mkdir -p android/app/src/main/res/xml
+          cat <<EOF > android/app/src/main/res/xml/network_security_config.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <network-security-config>
+              <base-config cleartextTrafficPermitted="true">
+                  <trust-anchors>
+                      <certificates src="system" />
+                      <certificates src="user" />
+                  </trust-anchors>
+              </base-config>
+          </network-security-config>
+          EOF
+
+      # ========================================================
+      # STEP 4: INJECT MANIFEST (LINKED TO SECURITY CONFIG)
       # ========================================================
       - name: Inject Custom AndroidManifest
         run: |
@@ -95,6 +113,7 @@ jobs:
               <application
                   android:allowBackup="true"
                   android:usesCleartextTraffic="true"
+                  android:networkSecurityConfig="@xml/network_security_config"
                   android:icon="@mipmap/ic_launcher"
                   android:label="@string/app_name"
                   android:theme="@style/Theme.AppCompat.Light.NoActionBar">
@@ -122,6 +141,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: DragonBrowser-YouTube-Fixed
+          name: DragonBrowser-Ultimate-Fix
           path: android/app/build/outputs/apk/debug/app-debug.apk
           
